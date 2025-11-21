@@ -1,6 +1,6 @@
 const spare = () => {
   return (
-    <div>Spare Parts</div>
+    <div>Hello, Welcome to the spare parts</div>
   )
 };
 
