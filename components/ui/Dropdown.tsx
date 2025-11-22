@@ -1,20 +1,87 @@
-const DropwDown = () => {
-  return (
-  <div className="flex w-full justify-center items-center h-screen dark:bg-gray-900">
-    <div className="dropdown inline-block relative">
-      <button className="bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold py-2 px-4 rounded inline-flex items-center">
-        <span className="mr-1">Dropdown</span>
-        <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/> </svg>
-      </button>
-      <ul className="dropdown-menu absolute hidden text-gray-700 dark:text-gray-300 pt-1">
-        <li className=""><a className="rounded-t bg-gray-200 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-700 py-2 px-4 block whitespace-no-wrap"
-            href="#">One</a></li>
-        <li className=""><a className="bg-gray-200 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-700 py-2 px-4 block whitespace-no-wrap" href="#">Two</a></li>
-        <li className=""><a className="rounded-b bg-gray-200 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-700 py-2 px-4 block whitespace-no-wrap" href="#">Three is the magic number</a></li>
-      </ul>
-    </div>
-  </div>
-  )
-};
+"use client"
 
-export default DropwDown;
+// Khuzomi De Ocampo
+
+import { useState, useRef, useEffect } from "react";
+import { ChevronDownIcon } from "lucide-react";
+
+interface DropDownProps {
+  title: string,
+  data: string[],
+  selectedData: SelectedData,
+  setSelectedData: React.Dispatch<React.SetStateAction<SelectedData | undefined>>,
+}
+
+export default function Dropdown({title, data, selectedData, setSelectedData}: DropDownProps) {
+  const [open, setOpen] = useState(false);
+  const [selectedTitle, setSelectedTitle] = useState<string>(title)
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const handleSelectData = (select: string): void => {
+    switch (title) {
+      case ("Area"):
+        setSelectedData(prev => ({...prev, area: select}))
+        setSelectedData(prev => ({...prev, data: undefined, code: undefined}))
+      case ("Machine"):
+        setSelectedData(prev => ({...prev, data: select}))
+      case ("Code"):
+        setSelectedData(prev => ({...prev, code: select}))
+      default:
+        setSelectedTitle(select)
+    }
+
+    setOpen(false)
+  }
+
+  useEffect(() => {
+    if (title != "Area") {
+      setSelectedTitle(title)
+    }
+  }, [selectedData?.area])
+
+  useEffect(() => {
+    const handleClick = (e: PointerEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("click", handleClick);
+    return () => document.removeEventListener("click", handleClick);
+  }, []);
+
+  return (
+    <div className="relative flex w-full" ref={menuRef}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="px-4 py-2 text-gray-500 border-1 border-gray-40 w-full rounded-md flex justify-between gap-4 truncate max-w-96"
+      >
+        {selectedTitle}
+        <span><ChevronDownIcon size={"24px"} /></span>
+      </button>
+
+      {open && (
+        <div 
+          className="absolute bg-white text-gray-500 border border-gray-200 rounded-md shadow-lg max-h-100 overflow-y-auto" 
+          style={{ 
+            marginTop: `${menuRef.current?.clientHeight && menuRef.current?.clientHeight + 4}px`,
+            width: `${menuRef.current?.clientWidth && menuRef.current?.clientWidth + 4}px`
+          }}
+        >
+          {
+            data.map((d: string, index: number) => {
+              return (    
+                <button 
+                  key={index.toString()}
+                  onClick={() => handleSelectData(d)}
+                  className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                >
+                  {d}
+                </button>
+              )
+            })
+          }
+       </div>
+      )}
+    </div>
+  );
+};

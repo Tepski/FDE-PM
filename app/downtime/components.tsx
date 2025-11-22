@@ -1,11 +1,28 @@
 import DropwDown from "@/components/ui/Dropdown";
+import { useEffect } from "react";
 
-interface FormI {
-  setShowModal: React.Dispatch<React.SetStateAction<boolean>>,
-  machineData:  MachineData,
-}
+const downtimeForm = ({ setShowModal, machineData, selectedData, setSelectedData }: FormI) => {
 
-const downtimeForm = ({setShowModal, machineData}: FormI) => {
+  const getAreas = (): string[] => {
+    const area = machineData?.area?.map((a) => a.area)
+
+    return area
+  }
+
+  const getMachines = (): string[] => {
+    const area = machineData.area?.filter((a) => a.area == selectedData.area)[0]
+    const machines = machineData.data.filter((machine) => machine.area_id.toString() == area.area_id.toString())
+
+    return machines.map((m) => m.name).sort()
+  }
+
+  const getCodes = (): string[] => {
+    const machine = machineData.data?.filter(d => d.name == selectedData.data)[0];
+    const codes = machineData.code.filter((code) => code.data_id.toString() == machine?.data_id.toString());
+
+    return codes.map(c => c.code);
+  }
+
   return (
     <div className='w-full h-full flex flex-col relative'>
 
@@ -14,8 +31,9 @@ const downtimeForm = ({setShowModal, machineData}: FormI) => {
             <div className='flex flex-col'>
               <label className='text-gray-700'>Machine</label>
               <div className='w-full flex gap-4'>
-                <input placeholder='Select Machine' className='border-1 border-gray-400 p-2 rounded-md flex-3' />
-                <input placeholder='Select Machine' className='border-1 border-gray-400 p-2 rounded-md flex-1' />
+                <DropwDown title="Area" data={getAreas()} selectedData= {selectedData} setSelectedData={setSelectedData}/>
+                <DropwDown title="Machine" data={selectedData?.area ? getMachines() : []} selectedData={selectedData} setSelectedData={setSelectedData} />
+                <DropwDown title="Code" data={selectedData?.data ? getCodes() : []} selectedData={selectedData} setSelectedData={setSelectedData}/>
               </div>
             </div> 
 

@@ -33,13 +33,15 @@ declare global {
   }
 
   interface SelectedData {
-    data: string,
-    area: string,
-    code: string,
+    data?: string,
+    area?: string,
+    code?: string,
   }
 
   interface FormI {
-    setShowModal?: React.Dispatch<React.SetStateAction<boolean>>,
-    machineData?:  MachineData,
+    setShowModal: React.Dispatch<React.SetStateAction<boolean>>,
+    machineData:  MachineData,
+    selectedData: SelectedData,
+    setSelectedData: React.Dispatch<React.SetStateAction<SelectedData | undefined>>
   }
 }
