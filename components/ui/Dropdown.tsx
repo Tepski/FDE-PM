@@ -14,7 +14,8 @@ interface DropDownProps {
 
 export default function Dropdown({title, data, selectedData, setSelectedData}: DropDownProps) {
   const [open, setOpen] = useState(false);
-  const [selectedTitle, setSelectedTitle] = useState<string>(title)
+  const [selectedTitle, setSelectedTitle] = useState<string>(title);
+  const [active, setActive] = useState<boolean>(true);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const handleSelectData = (select: string): void => {
@@ -29,15 +30,31 @@ export default function Dropdown({title, data, selectedData, setSelectedData}: D
       default:
         setSelectedTitle(select)
     }
-
     setOpen(false)
-  }
+  };
+
+  const handleActive = () => {
+    switch (title) {
+      case ("Area"):
+        setActive(() => selectedData?.area ? true : false);
+      case ("Machine"): 
+        setActive(() => selectedData?.data ? true : false);
+      case ("Code"): 
+        setActive(() => selectedData?.code ? true : false);
+    } 
+  };
+
+  // Everything after the two /s will be considered as a comment and will not be read by  the compiler
 
   useEffect(() => {
     if (title != "Area") {
-      setSelectedTitle(title)
+      setSelectedTitle(() => title)
     }
   }, [selectedData?.area])
+
+  useEffect(() => {
+    handleActive();
+  }, [selectedData])
 
   useEffect(() => {
     const handleClick = (e: PointerEvent) => {

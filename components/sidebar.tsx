@@ -28,6 +28,8 @@ const sidebar = () =>  {
       {utils.map((item, index) => {
         return (
           <a href={item.path}
+            target="_blank"
+            rel="noopener noreferer"
             className={`flex gap-4 items-center hover:cursor-pointer 
             ${pathName != item.path && "hover:bg-gray-200"} p-2 rounded-sm ${item.path == pathName && selected_style}`} 
             key={index.toString()}>

@@ -87,8 +87,8 @@ const downtimeForm = ({ setShowModal, machineData, selectedData, setSelectedData
       </div>
 
       <div className='w-full flex justify-end justify-self-end place-self-end gap-4 pt-2 border-t-1 border-t-[rgb(200,200,200)]'>
-        <div onClick={() => setShowModal(false)} className='px-4 py-1 text-center items-center border-1 border-black rounded-full'>Close</div>
-        <div onClick={() => setShowModal(false)} className='bg-black text-white px-4 py-1 rounded-full items-center'>Confirm</div>
+        <div onClick={() => setShowModal(false)} className='hover:cursor-pointer px-4 py-1 text-center items-center border-1 border-black rounded-full'>Close</div>
+        <div onClick={() => setShowModal(false)} className='hover:cursor-pointer bg-black text-white px-4 py-1 rounded-full items-center'>Confirm</div>
       </div>
     </div> 
   )
