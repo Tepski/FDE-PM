@@ -31,8 +31,8 @@ function RootLayout({children}: pageI) {
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <div className="w-full h-screen flex">
-          <div className="sidebar w-[17%] h-full  bg-[rgb(240,240,240)] border-r-1 border-r-[rgb(229,229,229)]">
-            <Link href="./" className="header flex px-4 items-center h-[5%] w-full border-b-1 border-b-[rgb(229,229,229)]">
+          <div className="sidebar w-[17%] h-full  bg-[rgb(240,240,240)] border-r border-r-[rgb(229,229,229)]">
+            <Link href="./" className="header flex px-4 items-center h-[5%] w-full border-b border-b-[rgb(229,229,229)]">
               <Header />
             </Link>
             <div className="navigator flex flex-col h-[95%] w-full p-4 gap-4">

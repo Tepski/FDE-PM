@@ -2,20 +2,23 @@
 
 import { useState, useEffect, FormEvent } from "react";
 import dayjs, { Dayjs } from "dayjs";
-import { Files, RefreshCw, XIcon, Calendar } from "lucide-react";
+import { Files, XIcon, Maximize, Minimize } from "lucide-react";
 import {DowntimeModel, UserModel, MachineModel} from "./models";
 import { DatePicker, TimeField } from "@mui/x-date-pickers";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 
-import { TextField, FormControl, MenuItem, InputLabel, Button, Autocomplete } from "@mui/material";
+import { TextField, FormControl, MenuItem, InputLabel, Button, Autocomplete, FormGroup, Checkbox, FormControlLabel } from "@mui/material";
 import Select, { SelectChangeEvent } from "@mui/material/Select";
-import { machine } from "os";
+import { Warnes } from "next/font/google";
 
 const dummyData: DowntimeModel = {
   id: 0,
+  iticket: "",
+  area: "",
   date: dayjs(),
   machine: "",
+  partNo: "",
   abnormality: "",
   type: "",
   action: "",
@@ -23,29 +26,49 @@ const dummyData: DowntimeModel = {
   actionBy: ""
 }
 
+const PORT: string = "8801";
+
 const downtime = () => {
-  const DATA_HEADERS: string[] = ["Date", "Machine", "Abnormality", "Trouble Type", "Action Done", "Shift", "Duration", "Action By"];
+  const DATA_HEADERS: string[][] = [["Date", "date"], ["iTicket", "iticket"], ["Machine", "machine"], 
+    ["Area", "area"], ["Part Replaced", "partNo"], ["Abnormality", "abnormality"], ["Trouble Type", "type"], 
+  ["Action Done", "action"], ["Duration", "duration"], ["Action By", "actionBy"]];
+
+  interface FilterValue {
+    key: keyof DowntimeModel,
+    value: string | number
+    choices?: string[]
+  }
 
   const [downtimes, setDowntimes] = useState<DowntimeModel[]>();
   const [users, setUsers] = useState<UserModel[]>();
   const [openModal, setOpenModal] = useState<boolean>(false);
   const [machineData, setMachineData] = useState<DowntimeModel>(dummyData);
   const [machineList, setMachineList] = useState<{label: string, id: number}[]>() 
+  const [maximize, setMaximize] = useState<boolean>(false);
+  const [usedSpare, setUsedSpare] = useState<boolean>(false)
+  const [canSubmit, setCanSubmit] = useState<boolean>(false)
+  const [filterData, setFilterData] = useState<FilterValue>()
+  const [showFilter, setShowFilter] = useState<{state: boolean, choices: unknown}>()
 
-  const getMachines = async () => {
-    await fetch("http://127.0.0.1:8801/api/dt_records").then(res => {
+  const getMachines = async (filter: FilterValue | undefined) => {
+    await fetch(`http://192.168.3.50:${PORT}/api/dt_records`).then(res => {
       return res.json()
     }).then(data => {
-      const dataList = data.data as DowntimeModel[]
+      let dataList = data.data as DowntimeModel[]
+      if (filter) {
+        dataList = dataList.filter((data) => { return data[filter.key] == filter.value })
+      }
 
       setDowntimes(() => dataList)
     })
   }
 
   const addRecord = async () => {
-    const res = await fetch("http://127.0.0.1:8801/api/add_record", {method: "POST", body: JSON.stringify(machineData)})
+    const res = await fetch(`http://192.168.3.50:${PORT}/api/add_record`, {method: "POST", body: JSON.stringify(machineData)})
 
     const data = await res.json()
+
+    console.log(data)
 
     const temp = data.data
     const tempList = [machineData]
@@ -58,7 +81,7 @@ const downtime = () => {
   }
 
   const getData = async () => {
-    await fetch("http://127.0.01:8801/api/data").then(res => {
+    await fetch(`http://192.168.3.50:${PORT}/api/data`).then(res => {
       return res.json()
     }).then(data => {
       let toSend = []
@@ -73,26 +96,69 @@ const downtime = () => {
   }
 
   const getUsers = async () => {
-    await fetch("http://127.0.01:8801/api/users").then(res => {
+    await fetch(`http://192.168.3.50:${PORT}/api/users`).then(res => {
       return res.json()
     }).then(data => {
       setUsers(() => data.data as UserModel[])
     })
   }
 
+  const submitValidation = () => {
+    if (
+      machineData.iticket != "" &&
+      machineData.area != "" &&
+      machineData.machine != "" &&
+      machineData.abnormality != "" &&
+      machineData.type != "" &&
+      machineData.action != "" &&
+      machineData.actionBy != "" &&
+      machineData.start &&
+      machineData.end
+    ) {
+      setCanSubmit(true)
+    } else {
+      setCanSubmit(false)
+    }
+  }
+
+  const setLocal = (key: string, value: string) => {
+    window.localStorage.setItem(key, value)
+  }
+
   const handleOnChange = <K extends keyof DowntimeModel>(key: K) =>
-      (e: SelectChangeEvent | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        console.log("Selected:", e.target.value)
-        setMachineData(prev => ({
-        ...prev,
-        [key]: e.target.value,
-      }));
-    };
+    (e: SelectChangeEvent | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      console.log("Selected:", e.target.value)
+      setMachineData(prev => ({
+      ...prev,
+      [key]: e.target.value,
+    }));
+  };
+
+  const handleFilter = (key: keyof DowntimeModel) => {
+    setFilterData({key: key, value: ""})
+
+    const choices = new Set(downtimes?.map((item) => {return item[key]}))
+    console.log("Eto and Direct:", choices)
+    setShowFilter({state: true, choices: choices})
+  }
 
   useEffect(() => {
-    getMachines()
+    submitValidation()
+  }, [machineData])
+
+  useEffect(() => {
+    console.log(showFilter)
+  }, [showFilter])
+
+  useEffect(() => {
+    getMachines(undefined)
     getData()
     getUsers()
+    submitValidation()
+
+    return () => {
+      setLocal("maximize", JSON.stringify(maximize))
+    }
   }, [])
 
   const onClose = () => {
@@ -101,10 +167,9 @@ const downtime = () => {
   }
 
   const onSubmit = (e: FormEvent) => {
-   e.preventDefault()
+    e.preventDefault()
 
     addRecord()
-
     onClose()
   }
 
@@ -115,7 +180,13 @@ const downtime = () => {
           <tr className=""  >
             {DATA_HEADERS.map((header, index) => {
                 return (
-                  <th className={`px-4 py-2 ${index == 4 ? "w-3/10" : "1/10"} hover:bg-gray-200 hover:cursor-pointer border-b border-r border-[rgb(229,229,229)] font-semibold text-gray-600`} key={index.toString()}>{header}</th>
+                  <th 
+                    className={`px-4 py-2 w-[${String(1/DATA_HEADERS.length)}]  hover:bg-gray-200 hover:cursor-pointer border-b border-r border-[rgb(229,229,229)] font-semibold text-gray-600`} 
+                    key={index.toString()}
+                    onClick={() => handleFilter(header[1] as keyof DowntimeModel)}
+                  >
+                  {header[0]}
+                  </th>
                 )
             })}
           </tr>
@@ -125,18 +196,25 @@ const downtime = () => {
               return (
                 <tr 
                   key={index.toString()} 
-                  className={`text-center text-xs text-gray-500 hover:bg-gray-200 ${index == 4 ? "w-3/10" : "1/10"} ${index % 2 == 0 && "bg-blue-50" }`}
+                  className={`text-center text-xs text-gray-500 hover:bg-gray-200  ${index % 2 != 0 && "bg-blue-50" }`}
                 >
                   <td className="py-2 border-x border-x-gray-200 overflow-hidden font-semibold text-[10px]">{dt.date?.toString().split("T")[0]}</td> 
+                  <td className="py-2 border-x border-x-gray-200 overflow-hidden font-semibold text-[10px]">
+                    <a 
+                      href={dt.iticket}
+                      target="_blank"
+                      rel="noopener noreferer"
+                      className="text-blue-800 underline"
+                    >
+                      {dt.iticket.substring(dt.iticket.length - 6)}
+                    </a>
+                  </td>
                   <td className="py-2 border-x border-x-gray-200 overflow-hidden">{dt.machine}</td> 
+                  <td className="py-2 border-x border-x-gray-200 overflow-hidden">{dt.area}</td> 
+                  <td className="py-2 border-x border-x-gray-200 overflow-hidden">{dt.partNo != "" ? dt.partNo : "n/a"}</td> 
                   <td className="py-2 border-x border-x-gray-200 overflow-hidden">{dt.abnormality}</td> 
-                  <td className={`py-2 border-x border-x-gray-200 overflow-hidden ${dt.type.includes("REPAIR") ? "text-yellow-800" : "text-blue-800"}`}>{dt.type}</td> 
+                  <td className={`py-2 border-x border-x-gray-200 overflow-hidden ${dt.type.includes("Rep") ? "text-yellow-800" : "text-blue-800"}`}>{dt.type}</td> 
                   <td className="py-2 border-x border-x-gray-200 truncate max-w-[200px] overflow-hidden text-start px-2">{dt.action}</td> 
-                  <td 
-                    className="p-2 border-x border-x-gray-200 overflow-hidden"
-                  >
-                    <p className={`${dt.shift?.trim() == "DAYSHIFT" ? "text-yellow-800 border-yellow-800 bg-yellow-300/30" : "text-gray-200 border-gray-800/30 bg-gray-500" } border rounded-sm`}>{dt.shift}</p>
-                  </td> 
                   <td className="py-2 border-x border-x-gray-200 overflow-hidden font-bold">{dt.duration + " min."}</td> 
                   <td className="py-2 border-x border-x-gray-200 overflow-hidden">{dt.actionBy}</td> 
                 </tr> 
@@ -147,19 +225,46 @@ const downtime = () => {
     )
   }
 
+  const filterComponent = () => {
+    return (
+      <div className="w-full h-full absolute left-0 top-0 flex justify-center items-center bg-black/20">
+        <div className="w-p[20%] h-auto bg-white px-4">
+          <p>Downtime Filter: 2 weeks</p> 
+            {filterData?.choices && filterData.choices.map((item, index) => {
+              return (
+                <p key={index.toString()}>Something: {item}</p>
+              )
+            })}
+        </div> 
+      </div>
+    )
+
+    // pumasok sila Jan 4, nagkita ba sila?
+    // Hindi daw
+    // Nagkita sila 29,
+    // Pasko nag aaway na sila
+    // Sa Harbor sila nagkita
+    // Jan 4 nangyari lahat, hindi sa boarding
+    // after non, may I-mark, *deny pa siya
+    // todo deny pa siya, pero tinanong daw ni riman
+    // allergy lang daw, pero chikinini daw.
+    
+    // Nakahiga daw ba? pero nakaupo
+    // Pinakilala na sa Ate ni Roma, real quick
+    // Ready na magpakilala sa parents at ipakilala sa parents
+
+  }
+
   return (
-    <div className="w-full h-full overflow-hidden">
-      <div className="w-full h-[5%] border-b-[rgb(229,229,229)] border-b-1 flex items-center justify-between px-4 sticky top-0 bg-white">
-
+    <div className={`overflow-hidden ${maximize && "absolute top-0 left-0 w-full h-screen"}" bg-white h-full w-full`}>
+      <div className="w-full h-[5%] border-b-[rgb(229,229,229)] border-b flex items-center justify-between px-4 sticky top-0 bg-white">
         <p className="text-gray-600 leading-12 font-bold" style={{fontFamily: '"Verdana", sans-serif'}}>DAILY DOWNTIME MONITORING</p>
-
         <div className="w-[30%] h-full py-2 flex items-center">
           <input placeholder="search" className="border border-gray-400 w-full h-[95%] rounded-full py-2 px-4"></input>
         </div>
-
         <div className="flex items-center">
-          <div className="text-gray-600 pe-6 border-e border-e-black">
-            <RefreshCw size={20} className="hover:cursor-pointer" />
+        <div className="text-gray-600 pe-6 border-e border-e-black" onClick={() =>  setMaximize(!maximize)}>
+            {maximize ? <Minimize size={20} className="hover:cursor-pointer" /> : <Maximize size={20} className="hover:cursor-pointer" />}
           </div>
           <p 
             onClick={() => setOpenModal(true)}
@@ -167,7 +272,8 @@ const downtime = () => {
           >
             <span>
               <Files size={18} />
-            </span> NEW RECORD
+            </span> 
+            NEW RECORD
           </p>
         </div>
       </div>
@@ -178,9 +284,11 @@ const downtime = () => {
         </div>
       </div>
 
+      {showFilter?.state && filterComponent()}
+
       {openModal && 
         <LocalizationProvider dateAdapter={AdapterDayjs}>
-          <div className="bg-black/70 w-full h-full absolute top-0 left-0 flex justify-center items-center">
+          <div className="bg-black/70 w-full h-full absolute top-0 left-0 flex justify-center items-center z-30">
               <div className="w-[20%] h-auto bg-white rounded-md flex-col flex justify-center items-center p-4">
                 <div className="w-full h-full flex flex-1 items-start justify-between pb-4">
                   <p className="text-gray-600">Downtime Details</p> 
@@ -189,17 +297,33 @@ const downtime = () => {
                   <form className="w-full h-full Body flex flex-16 flex-col gap-4 text-sm" onSubmit={onSubmit}>
 
                   {machineList &&  
-                    <Autocomplete
-                      disablePortal
-                      onChange={(_, newVal) => (
-                        setMachineData((prev) => ({...prev, machine: newVal?.label ?? ""}))
-                      )}
-                      options={machineList}
-                      getOptionKey={(machine) => machine.id}
-                      renderInput={(params) => <TextField {...params} label="Machine" value={machineData.machine} />}
-                    /> 
+                    <div className="flex flex-row w-full gap-2">
+                      <Autocomplete
+                        disablePortal
+                        onChange={(_, newVal) => (
+                          setMachineData((prev) => ({...prev, machine: newVal?.label ?? ""}))
+                        )}
+                        className="w-[70%]"
+                        options={machineList}
+                        getOptionKey={(machine) => machine.id}
+                        renderInput={(params) => <TextField {...params} label="Machine" value={machineData.machine} />}
+                      /> 
+
+                      <FormControl className="w-[30%]"> 
+                        <InputLabel id="type-label">Area</InputLabel>
+                        <Select labelId="type-label" id="type" label="Type" value={machineData?.area} onChange={handleOnChange("area")}>
+                          <MenuItem value="20CY">20CY</MenuItem>
+                          <MenuItem value="21MY">21MY</MenuItem>
+                          <MenuItem value="CT">CT</MenuItem>
+                          <MenuItem value="OT">OT</MenuItem>
+                          <MenuItem value="PNT">Painting</MenuItem>
+                          <MenuItem value="PZT">PZT</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </div>
                   }
 
+                    <TextField label="iTicket" value={machineData?.iticket} onChange={handleOnChange("iticket")}/>
                     <TextField label="Abnormality" value={machineData?.abnormality} onChange={handleOnChange("abnormality")}/>
 
                     <FormControl> 
@@ -208,16 +332,36 @@ const downtime = () => {
                         <MenuItem value="Repair">Repair</MenuItem>
                         <MenuItem value="Adjustment">Adjustment</MenuItem>
                         <MenuItem value="Adj & Rep">Adjustment and Repair</MenuItem>
+                        <MenuItem value="Maintenance">Maintenance</MenuItem>
                       </Select>
                     </FormControl>
+                    
+                    <FormGroup>
+                      <FormControlLabel 
+                        control={<Checkbox />} 
+                        checked={usedSpare} 
+                        onChange={(e: React.SyntheticEvent<Element, Event>, checked: boolean) => setUsedSpare(checked)} 
+                        label="Spare Parts Used?" className="text-gray-600"/>
+                    </FormGroup>
 
+                    {usedSpare && 
+                      <TextField label="Part/NRM No." value={machineData?.partNo} onChange={handleOnChange("partNo")}/>
+                    }
+                      
                     <textarea value={machineData?.action} className="border border-[rgb(229,229,229)] text-md rounded-md p-2 max-h-60 min-h-20" onChange={handleOnChange("action")} placeholder="Action Done"/> 
 
-                    <DatePicker label="Date" value={dayjs(machineData.date)}onChange={val => setMachineData((prev) => ({...prev, date: val ? val.toDate() : prev.date}))} />  
+                    <DatePicker 
+                      label="Date" 
+                      value={machineData.date} 
+                      onChange={val => setMachineData((prev) => ({
+                        ...prev, 
+                        date: val ?? prev.date
+                      }))} 
+                    />  
 
                     <div className="w-full flex justify-evenly gap-2">
-                      <TimeField label="From" onChange={val => setMachineData((prev) => ({...prev, start: val?.toString()}))}/> 
-                      <TimeField label="To" onChange={val => setMachineData((prev) => ({...prev, end: val?.toString()}))}/> 
+                      <TimeField label="From" format="HH:mm" ampm={false} onChange={val => setMachineData((prev) => ({...prev, start: val?.toString()}))}/> 
+                      <TimeField label="To" format="HH:mm" ampm={false} onChange={val => setMachineData((prev) => ({...prev, end: val?.toString()}))}/> 
                     </div> 
 
                     <div className="w-full h-full Confirm flex flex-2 gap-2 justify-around py-4 border-t border-[rgb(229,229,229)]">
@@ -232,10 +376,10 @@ const downtime = () => {
                             })} 
                           </Select>
                         </FormControl>
-                      </div> 
+                      </div>
                   
                       <div className="w-full flex">
-                        <Button variant="contained" fullWidth size="small" type="submit">SUBMIT</Button>
+                        <Button variant="contained" disabled={!canSubmit} fullWidth size="small" type="submit">SUBMIT</Button>
                       </div>
 
                     </div>            
@@ -243,19 +387,6 @@ const downtime = () => {
               </div>
           </div>
         </LocalizationProvider>
-      }
-
-      {openModal &&
-        <div className="absolute top-2 left-2">
-          <p className="text-white">Machine: {machineData.machine}</p>
-          <p className="text-white">Abnormality: {machineData.abnormality}</p>
-          <p className="text-white">Type: {machineData.type}</p>
-          <p className="text-white">Action: {machineData.action}</p>
-          <p className="text-white">Date: {machineData.date?.toString()}</p>
-          <p className="text-white">From: {machineData.start}</p>
-          <p className="text-white">To: {machineData.end}</p>
-          <p className="text-white">Action By: {machineData.actionBy}</p>
-        </div>
       }
     </div>
   )

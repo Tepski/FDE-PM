@@ -1,7 +1,5 @@
 "use client"
 
-// Khuzomi De Ocampo
-
 import { useState, useRef, useEffect } from "react";
 import { ChevronDownIcon } from "lucide-react";
 
@@ -37,10 +35,13 @@ export default function Dropdown({title, data, selectedData, setSelectedData}: D
     switch (title) {
       case ("Area"):
         setActive(() => selectedData?.area ? true : false);
+        break
       case ("Machine"): 
         setActive(() => selectedData?.data ? true : false);
+        break
       case ("Code"): 
         setActive(() => selectedData?.code ? true : false);
+        break
     } 
   };
 
@@ -56,15 +57,20 @@ export default function Dropdown({title, data, selectedData, setSelectedData}: D
     handleActive();
   }, [selectedData])
 
-  useEffect(() => {
-    const handleClick = (e: PointerEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("click", handleClick);
-    return () => document.removeEventListener("click", handleClick);
-  }, []);
+useEffect(() => {
+  const handleClick = (e: PointerEvent) => {
+    if (
+      menuRef.current &&
+      e.target instanceof Node &&
+      !menuRef.current.contains(e.target)
+    ) {
+      setOpen(false);
+    }
+  };
+
+  document.addEventListener("pointerdown", handleClick);
+  return () => document.removeEventListener("pointerdown", handleClick);
+}, []);
 
   return (
     <div className="relative flex w-full" ref={menuRef}>
