@@ -1,3 +1,5 @@
+import { UserModel } from "./app/downtime/models";
+
 export {};
 
 declare global {
@@ -36,6 +38,14 @@ declare global {
     data?: string,
     area?: string,
     code?: string,
+  }
+
+  interface ModalI {
+    machineData?: MachineData;
+    type: "Filter" | "Data" | "Form" | undefined
+    users?: UserModel[]
+    filter?: (names: string[]) => void
+    close: () => void
   }
 
   interface FormI {

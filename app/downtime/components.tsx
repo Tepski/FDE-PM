@@ -1,97 +1,59 @@
-import DropwDown from "@/components/ui/Dropdown";
-import { useEffect } from "react";
+"use client"
+import { useState } from "react";
 
-const downtimeForm = ({ setShowModal, machineData, selectedData, setSelectedData }: FormI) => {
+const Modals = ({
+  type, 
+  close, 
+  users, 
+  filter, 
+  machineData
+}: ModalI) => {
 
-  const getAreas = (): string[] => {
-    const area = machineData?.area?.map((a) => a.area)
+  const [selected, setSelected] = useState<string[]>([])
 
-    return area
+  const handleSelect = (name: string) => {
+    if (selected.includes(name)) {
+      setSelected(() => selected.filter(slc => slc != name))
+    } else {
+      setSelected((prev) => ([...prev, name]))
+    }
   }
 
-  const getMachines = (): string[] => {
-    const area = machineData.area?.filter((a) => a.area == selectedData.area)[0]
-    const machines = machineData.data.filter((machine) => machine.area_id.toString() == area.area_id.toString())
+  switch (type) {
+    case ("Filter"):
+      return (
+        <div className="w-full h-full px-8 py-2 flex flex-col justify-start items-start">
+          <div className="w-full flex justify-between pb-4">
+            <p className="font-semibold">FILTER USER {selected.length > 0 && `(${selected.length})`}</p>
+            <p onClick={close}>X</p>
+          </div>
+          <div className="overflow-y-scroll px-4">
+            {users && users.map((usr, ndx) => (
+              <p 
+                key={ndx.toString()} 
+                className={`hover:bg-gray-300 px-2 w-[220px] py-1 ${selected.includes(usr.name) && "bg-gray-300/40 rounded-md"}`} 
+                onClick={() => handleSelect(usr.name)}
+              >
+                {usr.name}
+              </p>
+            ))}
+          </div>
 
-    return machines.map((m) => m.name).sort()
-  }
-
-  const getCodes = (): string[] => {
-    const machine = machineData.data?.filter(d => d.name == selectedData.data)[0];
-    const codes = machineData.code.filter((code) => code.data_id.toString() == machine?.data_id.toString());
-
-    return codes.map(c => c.code);
-  }
-
-  return (
-    <div className='w-full h-full flex flex-col relative'>
-
-      <div className='w-full h-full flex'>
-        <div className='w-[50%] flex flex-col pe-4 gap-8'>
-            <div className='flex flex-col'>
-              <label className='text-gray-700'>Machine</label>
-              <div className='w-full flex gap-4'>
-                <DropwDown title="Area" data={getAreas()} selectedData= {selectedData} setSelectedData={setSelectedData}/>
-                <DropwDown title="Machine" data={selectedData?.area ? getMachines() : []} selectedData={selectedData} setSelectedData={setSelectedData} />
-                <DropwDown title="Code" data={selectedData?.data ? getCodes() : []} selectedData={selectedData} setSelectedData={setSelectedData}/>
-              </div>
-            </div> 
-
-            <div className='flex flex-col'>
-              <label className='text-gray-700'>Abnormality</label>
-              <input placeholder='Select Machine' className='border-1 border-gray-400 p-2 rounded-md' />
-            </div> 
-
-            <div className='flex flex-col'>
-              <label className='text-gray-700'>Abnormality</label>
-              <input placeholder='Select Machine' className='border-1 border-gray-400 p-2 rounded-md' />
-            </div> 
-
-            <div className='flex flex-col'>
-              <label className='text-gray-700'>Abnormality</label>
-              <input placeholder='Select Machine' className='border-1 border-gray-400 p-2 rounded-md' />
-            </div> 
-
-            <div className='flex flex-col'>
-              <label className='text-gray-700'>Abnormality</label>
-              <textarea placeholder='Select Machine' className='border-1 border-gray-400 p-2 rounded-md min-h-[25vh]' />
-            </div> 
+          <button 
+            className="w-full text-center bg-blue-400 text-white rounded-xl py-2 my-2" 
+            disabled={!selected}
+            onClick={() => filter && filter(selected)}
+          >Submit</button>
         </div>
+      )
 
-        <div className='w-[50%] flex flex-col pe-4 gap-8'>
-            <div className='flex flex-col'>
-              <label className='text-gray-700'>Abnormality</label>
-              <textarea placeholder='Select Machine' className='border-1 border-gray-400 p-2 rounded-md min-h-[25vh]' />
-            </div> 
-
-            <div className='flex flex-col'>
-              <label className='text-gray-700'>Machine</label>
-              <input placeholder='Select Machine' className='border-1 border-gray-400 p-2 rounded-md' />
-            </div> 
-
-            <div className='flex flex-col'>
-              <label className='text-gray-700'>Abnormality</label>
-              <input placeholder='Select Machine' className='border-1 border-gray-400 p-2 rounded-md' />
-            </div> 
-
-            <div className='flex flex-col'>
-              <label className='text-gray-700'>Abnormality</label>
-              <input placeholder='Select Machine' className='border-1 border-gray-400 p-2 rounded-md' />
-            </div> 
-
-            <div className='flex flex-col'>
-              <label className='text-gray-700'>Abnormality</label>
-              <input placeholder='Select Machine' className='border-1 border-gray-400 p-2 rounded-md' />
-            </div> 
+    case ("Data"):
+      return (
+        <div onClick={close}>
+          {machineData && <p>Hello, Made Her Faker</p>}
         </div>
-      </div>
-
-      <div className='w-full flex justify-end justify-self-end place-self-end gap-4 pt-2 border-t-1 border-t-[rgb(200,200,200)]'>
-        <div onClick={() => setShowModal(false)} className='hover:cursor-pointer px-4 py-1 text-center items-center border-1 border-black rounded-full'>Close</div>
-        <div onClick={() => setShowModal(false)} className='hover:cursor-pointer bg-black text-white px-4 py-1 rounded-full items-center'>Confirm</div>
-      </div>
-    </div> 
-  )
+      )
+  }
 };
 
-export default downtimeForm;
+export default Modals;

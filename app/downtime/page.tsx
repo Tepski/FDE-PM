@@ -2,15 +2,15 @@
 
 import { useState, useEffect, FormEvent } from "react";
 import dayjs, { Dayjs } from "dayjs";
-import { Files, XIcon, Maximize, Minimize } from "lucide-react";
+import { Files, XIcon, Maximize, Minimize, ArrowRight } from "lucide-react";
 import {DowntimeModel, UserModel, MachineModel} from "./models";
 import { DatePicker, TimeField } from "@mui/x-date-pickers";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import Modals from "./components";
 
-import { TextField, FormControl, MenuItem, InputLabel, Button, Autocomplete, FormGroup, Checkbox, FormControlLabel } from "@mui/material";
+import { TextField, FormControl, MenuItem, InputLabel, Button, Autocomplete, FormGroup, Checkbox, FormControlLabel, Modal } from "@mui/material";
 import Select, { SelectChangeEvent } from "@mui/material/Select";
-import { Warnes } from "next/font/google";
 
 const dummyData: DowntimeModel = {
   id: 0,
@@ -26,12 +26,12 @@ const dummyData: DowntimeModel = {
   actionBy: ""
 }
 
-const PORT: string = "8801";
+const PORT: string = "8805";
 
 const downtime = () => {
   const DATA_HEADERS: string[][] = [["Date", "date"], ["iTicket", "iticket"], ["Machine", "machine"], 
     ["Area", "area"], ["Part Replaced", "partNo"], ["Abnormality", "abnormality"], ["Trouble Type", "type"], 
-  ["Action Done", "action"], ["Duration", "duration"], ["Action By", "actionBy"]];
+    ["Action Done", "action"], ["Duration", "duration"], ["Action By", "actionBy"]];
 
   interface FilterValue {
     key: keyof DowntimeModel,
@@ -41,15 +41,16 @@ const downtime = () => {
 
   const [downtimes, setDowntimes] = useState<DowntimeModel[]>();
   const [users, setUsers] = useState<UserModel[]>();
-  const [openModal, setOpenModal] = useState<boolean>(false);
   const [machineData, setMachineData] = useState<DowntimeModel>(dummyData);
   const [machineList, setMachineList] = useState<{label: string, id: number}[]>() 
   const [maximize, setMaximize] = useState<boolean>(false);
   const [usedSpare, setUsedSpare] = useState<boolean>(false)
   const [canSubmit, setCanSubmit] = useState<boolean>(false)
   const [filterData, setFilterData] = useState<FilterValue>()
-  const [showFilter, setShowFilter] = useState<{state: boolean, choices: unknown}>()
+  const [tempUsers, setTempUsers] = useState<string[]>([])
 
+  const [openModal, setOpenModal] = useState<{state: boolean, type: "Form" | "Data" | "Filter" | undefined}>({state: true, type: "Data"})
+  
   const getMachines = async (filter: FilterValue | undefined) => {
     await fetch(`http://192.168.3.50:${PORT}/api/dt_records`).then(res => {
       return res.json()
@@ -60,6 +61,8 @@ const downtime = () => {
       }
 
       setDowntimes(() => dataList)
+    }).catch(e => {
+      console.log("error occured:", e)
     })
   }
 
@@ -77,7 +80,6 @@ const downtime = () => {
     if (res.status == 200) {
       setDowntimes((prev) => ([temp, ...prev ?? []]))
     }
-
   }
 
   const getData = async () => {
@@ -86,12 +88,16 @@ const downtime = () => {
     }).then(data => {
       let toSend = []
 
+      console.log("Data fetched:", data)
+
       for (let machine of data.data as MachineModel[]) {
         const machObj = {label: machine.name ?? "", id: machine.id ?? 0}
         toSend.push(machObj)
       }
 
       setMachineList(() => toSend)
+    }).catch((e) => {
+      console.log("An error occured:", e)
     })
   }
 
@@ -135,20 +141,42 @@ const downtime = () => {
   };
 
   const handleFilter = (key: keyof DowntimeModel) => {
+    console.log("Pinipindot ko na erps...")
     setFilterData({key: key, value: ""})
 
     const choices = new Set(downtimes?.map((item) => {return item[key]}))
     console.log("Eto and Direct:", choices)
-    setShowFilter({state: true, choices: choices})
+    setOpenModal({state: true, type: "Filter"})
+  }
+
+  const handleUserChange = (event: SelectChangeEvent<string[]>) => {
+    const {
+      target: {value},
+    } = event;
+
+    setTempUsers(typeof value == "string" ? value.split(",") : value)
   }
 
   useEffect(() => {
     submitValidation()
+    console.log("Eto yung change pre ->:", machineData)
   }, [machineData])
 
   useEffect(() => {
-    console.log(showFilter)
-  }, [showFilter])
+    let usrs = ""
+
+    if (tempUsers.length > 0) {
+      for (let i = 0; i < tempUsers.length; i++) {
+        if (i != 0) {
+          usrs += ", "
+        }
+        usrs += tempUsers[i]
+      }
+    }
+
+    setMachineData(prev => ({...prev, actionBy: usrs}))
+
+  }, [tempUsers])
 
   useEffect(() => {
     getMachines(undefined)
@@ -163,13 +191,31 @@ const downtime = () => {
 
   const onClose = () => {
     setMachineData(dummyData)
-    setOpenModal(false)
+    setOpenModal((prev) => ({...prev, state: false}))
   }
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
+    console.log("Submit Success")
 
     addRecord()
+    onClose()
+  }
+
+  const filterFuncTest = (names: string[]) => {
+    const filtered = downtimes?.filter((dt) => {
+
+      for (let usr of names) {
+        if (dt.actionBy.includes(usr)) {
+          return true
+        }
+      }
+      
+      return false
+    })
+
+    setDowntimes(() => filtered)
+
     onClose()
   }
 
@@ -181,7 +227,8 @@ const downtime = () => {
             {DATA_HEADERS.map((header, index) => {
                 return (
                   <th 
-                    className={`px-4 py-2 w-[${String(1/DATA_HEADERS.length)}]  hover:bg-gray-200 hover:cursor-pointer border-b border-r border-[rgb(229,229,229)] font-semibold text-gray-600`} 
+                    className={`px-4 py-2 w-[${String(1/DATA_HEADERS.length)}]  hover:bg-gray-200 hover:cursor-pointer 
+                      border-b border-r border-[rgb(229,229,229)] font-semibold text-gray-600`} 
                     key={index.toString()}
                     onClick={() => handleFilter(header[1] as keyof DowntimeModel)}
                   >
@@ -196,11 +243,13 @@ const downtime = () => {
               return (
                 <tr 
                   key={index.toString()} 
-                  className={`text-center text-xs text-gray-500 hover:bg-gray-200  ${index % 2 != 0 && "bg-blue-50" }`}
+                  className={`text-center text-xs text-gray-500 hover:bg-gray-200 hover:cursor-pointer active:bg-gray-300 ${index % 2 != 0 && "bg-blue-50" }`}
+                  onClick={() => setOpenModal({state: true, type: "Data"})}
                 >
                   <td className="py-2 border-x border-x-gray-200 overflow-hidden font-semibold text-[10px]">{dt.date?.toString().split("T")[0]}</td> 
-                  <td className="py-2 border-x border-x-gray-200 overflow-hidden font-semibold text-[10px]">
+                  <td className="py-2 border-x border-x-gray-200 overflow-hidden font-semibold text-[10px] z-30">
                     <a 
+                      onClick={(e) => e.stopPropagation()}
                       href={dt.iticket}
                       target="_blank"
                       rel="noopener noreferer"
@@ -215,7 +264,7 @@ const downtime = () => {
                   <td className="py-2 border-x border-x-gray-200 overflow-hidden">{dt.abnormality}</td> 
                   <td className={`py-2 border-x border-x-gray-200 overflow-hidden ${dt.type.includes("Rep") ? "text-yellow-800" : "text-blue-800"}`}>{dt.type}</td> 
                   <td className="py-2 border-x border-x-gray-200 truncate max-w-[200px] overflow-hidden text-start px-2">{dt.action}</td> 
-                  <td className="py-2 border-x border-x-gray-200 overflow-hidden font-bold">{dt.duration + " min."}</td> 
+                  <td className={`py-2 border-x border-x-gray-200 overflow-hidden font-bold ${dt.duration && dt.duration >= 60 && "text-red-400"}`}>{dt.duration + " min."}</td> 
                   <td className="py-2 border-x border-x-gray-200 overflow-hidden">{dt.actionBy}</td> 
                 </tr> 
               )
@@ -223,36 +272,6 @@ const downtime = () => {
         </tbody>
       </table>
     )
-  }
-
-  const filterComponent = () => {
-    return (
-      <div className="w-full h-full absolute left-0 top-0 flex justify-center items-center bg-black/20">
-        <div className="w-p[20%] h-auto bg-white px-4">
-          <p>Downtime Filter: 2 weeks</p> 
-            {filterData?.choices && filterData.choices.map((item, index) => {
-              return (
-                <p key={index.toString()}>Something: {item}</p>
-              )
-            })}
-        </div> 
-      </div>
-    )
-
-    // pumasok sila Jan 4, nagkita ba sila?
-    // Hindi daw
-    // Nagkita sila 29,
-    // Pasko nag aaway na sila
-    // Sa Harbor sila nagkita
-    // Jan 4 nangyari lahat, hindi sa boarding
-    // after non, may I-mark, *deny pa siya
-    // todo deny pa siya, pero tinanong daw ni riman
-    // allergy lang daw, pero chikinini daw.
-    
-    // Nakahiga daw ba? pero nakaupo
-    // Pinakilala na sa Ate ni Roma, real quick
-    // Ready na magpakilala sa parents at ipakilala sa parents
-
   }
 
   return (
@@ -267,7 +286,7 @@ const downtime = () => {
             {maximize ? <Minimize size={20} className="hover:cursor-pointer" /> : <Maximize size={20} className="hover:cursor-pointer" />}
           </div>
           <p 
-            onClick={() => setOpenModal(true)}
+            onClick={() => setOpenModal({state: true, type: undefined})}
             className="hover:bg-gray-200 hover:cursor-pointer rounded-md ms-2 text-sm py-1 px-2 items-center flex flex-row gap-2 text-gray-600"
           >
             <span>
@@ -284,9 +303,19 @@ const downtime = () => {
         </div>
       </div>
 
-      {showFilter?.state && filterComponent()}
+      {openModal.state && openModal.type && 
+        <div className="w-full h-full flex justify-center bg-black/20 items-center absolute top-0 left-0">
+          <div className="w-auto h-[80%] rounded-xl bg-white shadow-sm shadow-black/20"> 
+          {openModal.type == "Filter" ? 
+            <Modals type={openModal.type} close={onClose} users={users} filter={filterFuncTest}/>
+            :
+            <Modals type={openModal.type} close={onClose} machineData={downtimes[0]} />
+          }
+          </div>
+        </div>
+      }
 
-      {openModal && 
+      {openModal.state && !openModal.type && 
         <LocalizationProvider dateAdapter={AdapterDayjs}>
           <div className="bg-black/70 w-full h-full absolute top-0 left-0 flex justify-center items-center z-30">
               <div className="w-[20%] h-auto bg-white rounded-md flex-col flex justify-center items-center p-4">
@@ -294,7 +323,7 @@ const downtime = () => {
                   <p className="text-gray-600">Downtime Details</p> 
                   <XIcon size={"16px"} className="text-gray-600 hover:cursor-pointer active:opacity-80" onClick={onClose}/>
                 </div>            
-                  <form className="w-full h-full Body flex flex-16 flex-col gap-4 text-sm" onSubmit={onSubmit}>
+                  <div className="w-full h-full Body flex flex-16 flex-col gap-4 text-sm">
 
                   {machineList &&  
                     <div className="flex flex-row w-full gap-2">
@@ -345,7 +374,17 @@ const downtime = () => {
                     </FormGroup>
 
                     {usedSpare && 
-                      <TextField label="Part/NRM No." value={machineData?.partNo} onChange={handleOnChange("partNo")}/>
+                      <>
+                        <TextField label="Part/NRM No." value={machineData?.partNo} onChange={handleOnChange("partNo")}/>
+                       <a 
+                         href="http://192.168.3.12:8880/" 
+                         target="_blank"
+                         rel="noopener noreferer"
+                         className="text-sm text-gray-400 hover:cursor-pointer underline"
+                       >
+                         View Spare Parts
+                      </a>
+                      </>
                     }
                       
                     <textarea value={machineData?.action} className="border border-[rgb(229,229,229)] text-md rounded-md p-2 max-h-60 min-h-20" onChange={handleOnChange("action")} placeholder="Action Done"/> 
@@ -359,16 +398,25 @@ const downtime = () => {
                       }))} 
                     />  
 
-                    <div className="w-full flex justify-evenly gap-2">
+                    <div className="w-full flex items-center justify-evenly gap-2">
                       <TimeField label="From" format="HH:mm" ampm={false} onChange={val => setMachineData((prev) => ({...prev, start: val?.toString()}))}/> 
+                      <ArrowRight />
                       <TimeField label="To" format="HH:mm" ampm={false} onChange={val => setMachineData((prev) => ({...prev, end: val?.toString()}))}/> 
                     </div> 
 
                     <div className="w-full h-full Confirm flex flex-2 gap-2 justify-around py-4 border-t border-[rgb(229,229,229)]">
-                      <div className="w-full flex">
+                      <div className="w-full flex max-w-[50%]">
                         <FormControl fullWidth size="small" >
                           <InputLabel id="fde-label">FDE</InputLabel>
-                          <Select labelId="fde-label" id="fde" className="text-sm"label="FDE" value={machineData.actionBy ?? ""} onChange={handleOnChange("actionBy")}>
+                          <Select 
+                            labelId="fde-label" 
+                            id="fde" 
+                            multiple
+                            className="text-sm"
+                            label="FDE" 
+                            value={tempUsers} 
+                            onChange={handleUserChange}                    
+                          >
                             {users?.map((user, index) => {
                               return (
                                 <MenuItem value={user.name} key={user.u_id + index}>{user.name}</MenuItem>
@@ -379,11 +427,11 @@ const downtime = () => {
                       </div>
                   
                       <div className="w-full flex">
-                        <Button variant="contained" disabled={!canSubmit} fullWidth size="small" type="submit">SUBMIT</Button>
+                        <Button variant="contained" disabled={!canSubmit} onClick={onSubmit} fullWidth size="small" type="submit">SUBMIT</Button>
                       </div>
 
                     </div>            
-                  </form> 
+                  </div>
               </div>
           </div>
         </LocalizationProvider>
@@ -391,5 +439,4 @@ const downtime = () => {
     </div>
   )
 };
-
 export default downtime;

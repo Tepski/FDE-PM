@@ -1,9 +1,9 @@
 import { Wrench, Clock1, LayoutDashboard, CalendarDays, Squircle } from "lucide-react";
 
 const items: Items[] = [
-  {title: "Maintenance", active: true, selected: false, path: "/maintenance", icon: Wrench},
+  {title: "Maintenance", active: false, selected: false, path: "/maintenance", icon: Wrench},
   {title: "Downtime", active: true, selected: true, path: "/downtime", icon: Clock1},
-  {title: "Kanban", active: true, selected: false, path: "/kanban", icon: LayoutDashboard},
+  {title: "Kanban", active: false, selected: false, path: "/kanban", icon: LayoutDashboard},
   {title: "Annual", active: true, selected: false, path: "/annual", icon: CalendarDays},
 ]
 

@@ -15,13 +15,17 @@ const sidebar = () =>  {
       <p className="text-sm text-gray-500">Home</p>
       {items.map((item, index) => {
         return (
+          <div key={index.toString()} className="relative">
           <Link href={item.path}
-            className={`flex gap-4 items-center hover:cursor-pointer 
+            className={`flex gap-4 items-center  hover:cursor-pointer 
             ${pathName != item.path && "hover:bg-gray-200"} p-2 rounded-sm ${item.path == pathName && selected_style}`} 
-            key={index.toString()}>
+          >
             {<item.icon size={16} />}
             <p className="text-sm">{item.title}</p>
           </Link>
+
+          {!item.active && <div className="w-full h-full absolute top-0 left-0" />}
+          </div>
         )
       })}
       <p className="text-sm text-gray-500 pt-4">Utilities</p>
