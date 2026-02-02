@@ -1,4 +1,4 @@
-import { UserModel } from "./app/downtime/models";
+import { UserModel, DowntimeModel } from "./app/downtime/models";
 
 export {};
 
@@ -41,11 +41,12 @@ declare global {
   }
 
   interface ModalI {
-    machineData?: MachineData;
+    machineData?: DowntimeModel;
     type: "Filter" | "Data" | "Form" | undefined
     users?: UserModel[]
     filter?: (names: string[]) => void
     close: () => void
+    edit: (data: DowntimeModel) => voi
   }
 
   interface FormI {

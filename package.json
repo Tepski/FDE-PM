@@ -14,6 +14,7 @@
     "@emotion/styled": "^11.14.1",
     "@mui/material": "^7.3.6",
     "@mui/x-date-pickers": "^8.22.1",
+    "@mui/x-date-pickers-pro": "^8.26.0",
     "@tailwindplus/elements": "^1.0.19",
     "@types/pg": "^8.15.6",
     "dayjs": "^1.11.19",

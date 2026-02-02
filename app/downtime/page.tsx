@@ -1,10 +1,11 @@
 "use client"
 
 import { useState, useEffect, FormEvent } from "react";
-import dayjs, { Dayjs } from "dayjs";
-import { Files, XIcon, Maximize, Minimize, ArrowRight } from "lucide-react";
+import dayjs from "dayjs";
+import { Files, XIcon, Maximize, Minimize } from "lucide-react";
 import {DowntimeModel, UserModel, MachineModel} from "./models";
 import { DatePicker, TimeField } from "@mui/x-date-pickers";
+import { DateTimeRangePicker } from "@mui/x-date-pickers-pro";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import Modals from "./components";
@@ -23,7 +24,9 @@ const dummyData: DowntimeModel = {
   type: "",
   action: "",
   shift: "",
-  actionBy: ""
+  actionBy: "",
+  start: dayjs(),
+  end: dayjs()
 }
 
 const PORT: string = "8805";
@@ -48,8 +51,9 @@ const downtime = () => {
   const [canSubmit, setCanSubmit] = useState<boolean>(false)
   const [filterData, setFilterData] = useState<FilterValue>()
   const [tempUsers, setTempUsers] = useState<string[]>([])
+  const [viewData, setViewData] = useState<DowntimeModel | undefined>();
 
-  const [openModal, setOpenModal] = useState<{state: boolean, type: "Form" | "Data" | "Filter" | undefined}>({state: true, type: "Data"})
+  const [openModal, setOpenModal] = useState<{state: boolean, type: "Form" | "Data" | "Filter" | undefined}>({state: false, type: undefined})
   
   const getMachines = async (filter: FilterValue | undefined) => {
     await fetch(`http://192.168.3.50:${PORT}/api/dt_records`).then(res => {
@@ -109,6 +113,10 @@ const downtime = () => {
     })
   }
 
+  const validateTimeRange = (d1: dayjs.Dayjs, d2: dayjs.Dayjs) => {
+    
+  }
+
   const submitValidation = () => {
     if (
       machineData.iticket != "" &&
@@ -148,7 +156,7 @@ const downtime = () => {
     console.log("Eto and Direct:", choices)
     setOpenModal({state: true, type: "Filter"})
   }
-
+  
   const handleUserChange = (event: SelectChangeEvent<string[]>) => {
     const {
       target: {value},
@@ -178,16 +186,6 @@ const downtime = () => {
 
   }, [tempUsers])
 
-  useEffect(() => {
-    getMachines(undefined)
-    getData()
-    getUsers()
-    submitValidation()
-
-    return () => {
-      setLocal("maximize", JSON.stringify(maximize))
-    }
-  }, [])
 
   const onClose = () => {
     setMachineData(dummyData)
@@ -200,6 +198,11 @@ const downtime = () => {
 
     addRecord()
     onClose()
+  }
+
+  const handleViewData = (data: DowntimeModel) => {
+    setViewData(() => data)
+    setOpenModal(() => ({state: true, type: "Data"}))
   }
 
   const filterFuncTest = (names: string[]) => {
@@ -218,6 +221,27 @@ const downtime = () => {
 
     onClose()
   }
+
+  // .effects
+
+  const handleEdit = (data: DowntimeModel) => {
+    data.iticket = data.iticket.slice(data.iticket.length - 6, data.iticket.length)
+    console.log("Machine sa data to pre:", data.machine)
+    onClose()
+    setMachineData(data)
+    setOpenModal({state: true, type: undefined})
+  }
+
+  useEffect(() => {
+    getMachines(undefined)
+    getData()
+    getUsers()
+    submitValidation()
+
+    return () => {
+      setLocal("maximize", JSON.stringify(maximize))
+    }
+  }, [])
 
   const dataTable = () => {
     return (
@@ -244,7 +268,7 @@ const downtime = () => {
                 <tr 
                   key={index.toString()} 
                   className={`text-center text-xs text-gray-500 hover:bg-gray-200 hover:cursor-pointer active:bg-gray-300 ${index % 2 != 0 && "bg-blue-50" }`}
-                  onClick={() => setOpenModal({state: true, type: "Data"})}
+                  onClick={() => handleViewData(dt)}
                 >
                   <td className="py-2 border-x border-x-gray-200 overflow-hidden font-semibold text-[10px]">{dt.date?.toString().split("T")[0]}</td> 
                   <td className="py-2 border-x border-x-gray-200 overflow-hidden font-semibold text-[10px] z-30">
@@ -262,7 +286,7 @@ const downtime = () => {
                   <td className="py-2 border-x border-x-gray-200 overflow-hidden">{dt.area}</td> 
                   <td className="py-2 border-x border-x-gray-200 overflow-hidden">{dt.partNo != "" ? dt.partNo : "n/a"}</td> 
                   <td className="py-2 border-x border-x-gray-200 overflow-hidden">{dt.abnormality}</td> 
-                  <td className={`py-2 border-x border-x-gray-200 overflow-hidden ${dt.type.includes("Rep") ? "text-yellow-800" : "text-blue-800"}`}>{dt.type}</td> 
+                  <td className={`py-2 border-x border-x-gray-200 overflow-hidden ${dt.type.includes("Rep") ? "text-red-400" : "text-blue-800"}`}>{dt.type}</td> 
                   <td className="py-2 border-x border-x-gray-200 truncate max-w-[200px] overflow-hidden text-start px-2">{dt.action}</td> 
                   <td className={`py-2 border-x border-x-gray-200 overflow-hidden font-bold ${dt.duration && dt.duration >= 60 && "text-red-400"}`}>{dt.duration + " min."}</td> 
                   <td className="py-2 border-x border-x-gray-200 overflow-hidden">{dt.actionBy}</td> 
@@ -307,9 +331,9 @@ const downtime = () => {
         <div className="w-full h-full flex justify-center bg-black/20 items-center absolute top-0 left-0">
           <div className="w-auto h-[80%] rounded-xl bg-white shadow-sm shadow-black/20"> 
           {openModal.type == "Filter" ? 
-            <Modals type={openModal.type} close={onClose} users={users} filter={filterFuncTest}/>
+            <Modals type={openModal.type} close={onClose} users={users} filter={filterFuncTest} edit={handleEdit}/>
             :
-            <Modals type={openModal.type} close={onClose} machineData={downtimes[0]} />
+            viewData && <Modals type={openModal.type} close={onClose} edit={handleEdit} machineData={viewData ? viewData : dummyData} />
           }
           </div>
         </div>
@@ -329,9 +353,11 @@ const downtime = () => {
                     <div className="flex flex-row w-full gap-2">
                       <Autocomplete
                         disablePortal
-                        onChange={(_, newVal) => (
+                        onChange={(what, newVal) => {
+                          console.log("what", what, "New Value", newVal)
                           setMachineData((prev) => ({...prev, machine: newVal?.label ?? ""}))
-                        )}
+                        }}
+                        freeSolo
                         className="w-[70%]"
                         options={machineList}
                         getOptionKey={(machine) => machine.id}
@@ -389,8 +415,9 @@ const downtime = () => {
                       
                     <textarea value={machineData?.action} className="border border-[rgb(229,229,229)] text-md rounded-md p-2 max-h-60 min-h-20" onChange={handleOnChange("action")} placeholder="Action Done"/> 
 
+                    {/*
                     <DatePicker 
-                      label="Date" 
+                      label="Date"
                       value={machineData.date} 
                       onChange={val => setMachineData((prev) => ({
                         ...prev, 
@@ -403,6 +430,9 @@ const downtime = () => {
                       <ArrowRight />
                       <TimeField label="To" format="HH:mm" ampm={false} onChange={val => setMachineData((prev) => ({...prev, end: val?.toString()}))}/> 
                     </div> 
+                    */}
+
+                   <DateTimeRangePicker />
 
                     <div className="w-full h-full Confirm flex flex-2 gap-2 justify-around py-4 border-t border-[rgb(229,229,229)]">
                       <div className="w-full flex max-w-[50%]">

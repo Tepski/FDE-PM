@@ -11,8 +11,8 @@ export interface DowntimeModel {
   action: string,
   type: string,
   shift?: string,
-  start?: string,
-  end?: string,
+  start?: Dayjs,
+  end?: Dayjs,
   duration?: number,
   actionBy: string,
 }
