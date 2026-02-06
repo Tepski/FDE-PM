@@ -1,7 +1,7 @@
 import {Dayjs} from "dayjs"
 
 export interface DowntimeModel {
-  id?: number,
+  id: number,
   iticket: string,
   machine: string,
   area: string,

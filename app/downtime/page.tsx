@@ -4,14 +4,15 @@ import { useState, useEffect, FormEvent } from "react";
 import dayjs from "dayjs";
 import { Files, XIcon, Maximize, Minimize } from "lucide-react";
 import {DowntimeModel, UserModel, MachineModel} from "./models";
-import { DatePicker, TimeField } from "@mui/x-date-pickers";
-import { DateTimeRangePicker } from "@mui/x-date-pickers-pro";
+import { DateTimePicker } from "@mui/x-date-pickers";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import Modals from "./components";
 
 import { TextField, FormControl, MenuItem, InputLabel, Button, Autocomplete, FormGroup, Checkbox, FormControlLabel, Modal } from "@mui/material";
 import Select, { SelectChangeEvent } from "@mui/material/Select";
+import { machine } from "os";
+import { time } from "console";
 
 const dummyData: DowntimeModel = {
   id: 0,
@@ -52,6 +53,7 @@ const downtime = () => {
   const [filterData, setFilterData] = useState<FilterValue>()
   const [tempUsers, setTempUsers] = useState<string[]>([])
   const [viewData, setViewData] = useState<DowntimeModel | undefined>();
+  const [update, setUpdate] = useState<boolean>(false)
 
   const [openModal, setOpenModal] = useState<{state: boolean, type: "Form" | "Data" | "Filter" | undefined}>({state: false, type: undefined})
   
@@ -63,6 +65,8 @@ const downtime = () => {
       if (filter) {
         dataList = dataList.filter((data) => { return data[filter.key] == filter.value })
       }
+
+      dataList.sort((a, b) => b.id - a.id)
 
       setDowntimes(() => dataList)
     }).catch(e => {
@@ -84,6 +88,18 @@ const downtime = () => {
     if (res.status == 200) {
       setDowntimes((prev) => ([temp, ...prev ?? []]))
     }
+  }
+
+  const updateRecord = async (id: number | undefined) => {
+    if (!id) {
+      console.log("Cannot find ID")
+
+      return
+    }
+    const res = await fetch(`http://192.168.3.50:${PORT}/api/update_downtime/${id}`, {method: "PUT", body: JSON.stringify(machineData)})
+
+    const data = await res.json()
+    console.log(data)
   }
 
   const getData = async () => {
@@ -113,10 +129,6 @@ const downtime = () => {
     })
   }
 
-  const validateTimeRange = (d1: dayjs.Dayjs, d2: dayjs.Dayjs) => {
-    
-  }
-
   const submitValidation = () => {
     if (
       machineData.iticket != "" &&
@@ -141,7 +153,6 @@ const downtime = () => {
 
   const handleOnChange = <K extends keyof DowntimeModel>(key: K) =>
     (e: SelectChangeEvent | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      console.log("Selected:", e.target.value)
       setMachineData(prev => ({
       ...prev,
       [key]: e.target.value,
@@ -165,9 +176,22 @@ const downtime = () => {
     setTempUsers(typeof value == "string" ? value.split(",") : value)
   }
 
+  {/*
+    row row row your boat, gently down the stream,
+    be careful, be fast, be warry of a giant ship behind
+    row row row your boat, avoid the canons and the guns
+    a piece of coin you stole, decides the fate of life.
+  */}
+
+  {/*
+    old mcdonald had a farm, a house and a family of three,
+    a dog named bingo and chicken named barney
+    the food is scarce, it's the peak of the pandemic,
+    the family is well — all four of them
+  */}
+
   useEffect(() => {
     submitValidation()
-    console.log("Eto yung change pre ->:", machineData)
   }, [machineData])
 
   useEffect(() => {
@@ -192,11 +216,18 @@ const downtime = () => {
     setOpenModal((prev) => ({...prev, state: false}))
   }
 
-  const onSubmit = (e: FormEvent) => {
+  const onSubmit = (e: FormEvent, id: number | undefined) => {
     e.preventDefault()
     console.log("Submit Success")
 
-    addRecord()
+    if (!update) {
+      addRecord()
+    } else {
+      updateRecord(machineData.id)
+      setMachineData(dummyData)
+      window.location.reload()
+    }
+
     onClose()
   }
 
@@ -213,7 +244,6 @@ const downtime = () => {
           return true
         }
       }
-      
       return false
     })
 
@@ -223,10 +253,19 @@ const downtime = () => {
   }
 
   // .effects
+  useEffect(() => {
+    if (machineData.start && machineData.end) {
+      const duration = Number(machineData.end) - Number(machineData.start)
+
+      console.log("Duration:", duration / 60000)
+    }
+  }, [machineData.end])
 
   const handleEdit = (data: DowntimeModel) => {
+    setUpdate(true)
+
     data.iticket = data.iticket.slice(data.iticket.length - 6, data.iticket.length)
-    console.log("Machine sa data to pre:", data.machine)
+    setTempUsers(data.actionBy.split(","))
     onClose()
     setMachineData(data)
     setOpenModal({state: true, type: undefined})
@@ -353,14 +392,15 @@ const downtime = () => {
                     <div className="flex flex-row w-full gap-2">
                       <Autocomplete
                         disablePortal
-                        onChange={(what, newVal) => {
-                          console.log("what", what, "New Value", newVal)
-                          setMachineData((prev) => ({...prev, machine: newVal?.label ?? ""}))
+                        value={machineData && machineData.machine}
+                        onChange={(_, newVal) => {
+                          console.log("New Value", newVal)
+                          setMachineData((prev) => ({...prev, machine: typeof newVal == "string" ? newVal : newVal?.label ?? ""}))
                         }}
                         freeSolo
                         className="w-[70%]"
                         options={machineList}
-                        getOptionKey={(machine) => machine.id}
+                        getOptionKey={(machine) => typeof machine == "string" ? machine : machine.id}
                         renderInput={(params) => <TextField {...params} label="Machine" value={machineData.machine} />}
                       /> 
 
@@ -388,6 +428,10 @@ const downtime = () => {
                         <MenuItem value="Adjustment">Adjustment</MenuItem>
                         <MenuItem value="Adj & Rep">Adjustment and Repair</MenuItem>
                         <MenuItem value="Maintenance">Maintenance</MenuItem>
+                        <MenuItem value="Replacement">Replacement</MenuItem>
+                        <MenuItem value="Set-up">Machine Set-up</MenuItem>
+                        <MenuItem value="Change Model">Change Model</MenuItem>
+                        <MenuItem value="Transfer">Machine Transfer</MenuItem>
                       </Select>
                     </FormControl>
                     
@@ -407,33 +451,32 @@ const downtime = () => {
                          target="_blank"
                          rel="noopener noreferer"
                          className="text-sm text-gray-400 hover:cursor-pointer underline"
-                       >
-                         View Spare Parts
-                      </a>
+                       >View Spare Parts</a>
                       </>
                     }
                       
                     <textarea value={machineData?.action} className="border border-[rgb(229,229,229)] text-md rounded-md p-2 max-h-60 min-h-20" onChange={handleOnChange("action")} placeholder="Action Done"/> 
 
-                    {/*
-                    <DatePicker 
-                      label="Date"
-                      value={machineData.date} 
-                      onChange={val => setMachineData((prev) => ({
-                        ...prev, 
-                        date: val ?? prev.date
-                      }))} 
-                    />  
+                    {/*TIME PICKERS*/}
 
-                    <div className="w-full flex items-center justify-evenly gap-2">
-                      <TimeField label="From" format="HH:mm" ampm={false} onChange={val => setMachineData((prev) => ({...prev, start: val?.toString()}))}/> 
-                      <ArrowRight />
-                      <TimeField label="To" format="HH:mm" ampm={false} onChange={val => setMachineData((prev) => ({...prev, end: val?.toString()}))}/> 
-                    </div> 
-                    */}
+                    <DateTimePicker 
+                      label="From" 
+                      value={machineData.start} 
+                      minutesStep={1} 
+                      ampm={false}
+                      onChange={newVal => (setMachineData(prev => ({...prev, start: dayjs(newVal), end: dayjs(newVal)})))}  
+                    />
 
-                   <DateTimeRangePicker />
-
+                    <DateTimePicker 
+                      label="To" 
+                      value={machineData.end} 
+                      minutesStep={1} 
+                      ampm={false}
+                      minDate={machineData.start}
+                      minTime={machineData.start}
+                      onChange={newVal => (setMachineData(prev => ({...prev, end: dayjs(newVal)})))}
+                    />
+                
                     <div className="w-full h-full Confirm flex flex-2 gap-2 justify-around py-4 border-t border-[rgb(229,229,229)]">
                       <div className="w-full flex max-w-[50%]">
                         <FormControl fullWidth size="small" >
@@ -450,14 +493,14 @@ const downtime = () => {
                             {users?.map((user, index) => {
                               return (
                                 <MenuItem value={user.name} key={user.u_id + index}>{user.name}</MenuItem>
-                              ) 
+                              )
                             })} 
                           </Select>
                         </FormControl>
                       </div>
                   
                       <div className="w-full flex">
-                        <Button variant="contained" disabled={!canSubmit} onClick={onSubmit} fullWidth size="small" type="submit">SUBMIT</Button>
+                        <Button variant="contained" disabled={!canSubmit} onClick={(e) => onSubmit(e, machineData.id)} fullWidth size="small" type="submit">{update ? "UPDATE" : "SUBMIT"}</Button>
                       </div>
 
                     </div>            
