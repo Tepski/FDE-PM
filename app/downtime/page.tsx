@@ -11,8 +11,6 @@ import Modals from "./components";
 
 import { TextField, FormControl, MenuItem, InputLabel, Button, Autocomplete, FormGroup, Checkbox, FormControlLabel, Modal } from "@mui/material";
 import Select, { SelectChangeEvent } from "@mui/material/Select";
-import { machine } from "os";
-import { time } from "console";
 
 const dummyData: DowntimeModel = {
   id: 0,
@@ -160,7 +158,6 @@ const downtime = () => {
   };
 
   const handleFilter = (key: keyof DowntimeModel) => {
-    console.log("Pinipindot ko na erps...")
     setFilterData({key: key, value: ""})
 
     const choices = new Set(downtimes?.map((item) => {return item[key]}))
@@ -175,20 +172,6 @@ const downtime = () => {
 
     setTempUsers(typeof value == "string" ? value.split(",") : value)
   }
-
-  {/*
-    row row row your boat, gently down the stream,
-    be careful, be fast, be warry of a giant ship behind
-    row row row your boat, avoid the canons and the guns
-    a piece of coin you stole, decides the fate of life.
-  */}
-
-  {/*
-    old mcdonald had a farm, a house and a family of three,
-    a dog named bingo and chicken named barney
-    the food is scarce, it's the peak of the pandemic,
-    the family is well — all four of them
-  */}
 
   useEffect(() => {
     submitValidation()
@@ -253,21 +236,16 @@ const downtime = () => {
   }
 
   // .effects
-  useEffect(() => {
-    if (machineData.start && machineData.end) {
-      const duration = Number(machineData.end) - Number(machineData.start)
-
-      console.log("Duration:", duration / 60000)
-    }
-  }, [machineData.end])
-
   const handleEdit = (data: DowntimeModel) => {
     setUpdate(true)
 
     data.iticket = data.iticket.slice(data.iticket.length - 6, data.iticket.length)
     setTempUsers(data.actionBy.split(","))
     onClose()
+    data.start = dayjs(data.start)
+    data.end = dayjs(data.end)
     setMachineData(data)
+
     setOpenModal({state: true, type: undefined})
   }
 
@@ -473,7 +451,7 @@ const downtime = () => {
                       minutesStep={1} 
                       ampm={false}
                       minDate={machineData.start}
-                      minTime={machineData.start}
+                      minTime={machineData.start?.date() == machineData.end?.date() ? machineData.start : undefined}
                       onChange={newVal => (setMachineData(prev => ({...prev, end: dayjs(newVal)})))}
                     />
                 

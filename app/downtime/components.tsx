@@ -83,11 +83,11 @@ const Modals = ({
             </div>
             <div className="flex w-full justify-between ">
               <p className="font-semibold">Start:</p> 
-              <p className="text-green-700">{new Date().toString()}</p>
+              <p className="text-green-700">{machineData?.start?.toString()}</p>
             </div>
             <div className="flex w-full justify-between ">
               <p className="font-semibold">End:</p> 
-              <p className="text-red-700">{new Date().toString()}</p>
+              <p className="text-red-700">{machineData?.end?.toString()}</p>
             </div>
             <div className="flex w-full justify-between pb-4 border-b border-b-gray-300">
               <p className="font-semibold">Action By</p> 
