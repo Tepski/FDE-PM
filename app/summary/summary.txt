@@ -1,0 +1,6 @@
+Show summary for machine downtimes
+
+includes:
+    - Show top troubleshooters by log count
+    - Show machines troubleshooted the most
+    - Change timing (Weekly, Monthly, Annual, etc...)

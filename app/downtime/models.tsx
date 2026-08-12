@@ -20,7 +20,8 @@ export interface DowntimeModel {
 export interface MachineModel {
   id?: number,
   name?: string,
-  areaID?: number
+  areaID?: number,
+  areaStr?: string,
 }
 
 export interface UserModel {
@@ -30,3 +31,8 @@ export interface UserModel {
   position: string
 }
 
+export interface MachineObject {
+  label: string,
+  id: string | number,
+  area: string,
+}

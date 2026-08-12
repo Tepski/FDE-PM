@@ -44,9 +44,8 @@ declare global {
     machineData?: DowntimeModel;
     type: "Filter" | "Data" | "Form" | undefined
     users?: UserModel[]
-    filter?: (names: string[]) => void
     close: () => void
-    edit: (data: DowntimeModel) => voi
+    edit: (data: DowntimeModel) => void
   }
 
   interface FormI {
@@ -55,4 +54,9 @@ declare global {
     selectedData: SelectedData,
     setSelectedData: React.Dispatch<React.SetStateAction<SelectedData | undefined>>
   }
+
+  interface ModalProp {
+    state: boolean, 
+    type: "Form" | "Data" | "Filter" | undefined
+  } 
 }

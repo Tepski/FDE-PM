@@ -1,19 +1,16 @@
 "use client"
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Trash2, PenLine, CircleX } from "lucide-react";
-import { DowntimeModel } from "./models";
 
 const Modals = ({
   type, 
   close, 
   users, 
-  filter, 
   machineData,
   edit
 }: ModalI) => {
 
   const [selected, setSelected] = useState<string[]>([])
-  const [editState, setEditState] = useState<boolean>(false)
 
   const handleSelect = (name: string) => {
     if (selected.includes(name)) {
@@ -22,8 +19,6 @@ const Modals = ({
       setSelected((prev) => ([...prev, name]))
     }
   }
-
-  useEffect(() => { console.log(machineData) }, [])
 
   switch (type) {
     case ("Filter"):
@@ -38,7 +33,7 @@ const Modals = ({
               <p 
                 key={ndx.toString()} 
                 className={`hover:bg-gray-300 px-2 w-[220px] py-1 ${selected.includes(usr.name) && "bg-gray-300/40 rounded-md"}`} 
-                onClick={() => handleSelect(usr.name)}
+                onClick={() => handleSelect(`%${usr.name}%`)}
               >
                 {usr.name}
               </p>
@@ -48,7 +43,6 @@ const Modals = ({
           <button 
             className="w-full text-center bg-blue-400 text-white rounded-xl py-2 my-2" 
             disabled={!selected}
-            onClick={() => filter && filter(selected)}
           >Submit</button>
         </div>
       )

@@ -17,6 +17,7 @@
     "@mui/x-date-pickers-pro": "^8.26.0",
     "@tailwindplus/elements": "^1.0.19",
     "@types/pg": "^8.15.6",
+    "antd": "^6.5.3",
     "dayjs": "^1.11.19",
     "lucide-react": "^0.552.0",
     "next": "16.0.1",

@@ -1,10 +1,11 @@
-import { Wrench, Clock1, LayoutDashboard, CalendarDays, Squircle } from "lucide-react";
+import { Wrench, Clock1, LayoutDashboard, CalendarDays, Squircle, KeyIcon } from "lucide-react";
 
 const items: Items[] = [
-  {title: "Maintenance", active: false, selected: false, path: "/maintenance", icon: Wrench},
+  {title: "FDE Report", active: false, selected: false, path: "/summary", icon: Wrench},
   {title: "Downtime", active: true, selected: true, path: "/downtime", icon: Clock1},
   {title: "Kanban", active: false, selected: false, path: "/kanban", icon: LayoutDashboard},
-  {title: "Annual", active: true, selected: false, path: "/annual", icon: CalendarDays},
+  {title: "Annual", active: false, selected: false, path: "/annual", icon: CalendarDays},
+  {title: "Key Parts", active: true, selected: false, path: "/critical", icon: KeyIcon},
 ]
 
 const utils: Items[] = [
